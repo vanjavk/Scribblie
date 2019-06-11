@@ -1,13 +1,13 @@
 #pragma once
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <iostream>
 #include <vector>
 using namespace std;
-
-
 
 class context
 {
@@ -21,9 +21,10 @@ public:
     int xrel = 0;
     int yrel = 0;
     vector<vector<array<int,2>>> points;
-
-    
-
+    int lineSize = 1;
+    bool increase_lineSize();
+    bool decrease_lineSize();
+    //...
     int drawing = 0;
     SDL_Renderer *renderer;
     /**

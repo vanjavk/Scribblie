@@ -1,11 +1,4 @@
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
-#include <emscripten.h>
-#include <emscripten/html5.h>
-#include <emscripten/key_codes.h>
-// #include "SDL2/SDL.h"
 // #include "SDL2/SDL_image.h"
 // #include "SDL2/SDL_ttf.h"
 #include <iostream>
@@ -13,6 +6,15 @@
 #include <array>
 #include <string>
 #include "context.h"
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#include <emscripten/key_codes.h>
+// #include "SDL2/SDL.h"
 
 using namespace std;
 /**
@@ -113,6 +115,16 @@ void loop_handler(void *arg)
 
     context* ctx = static_cast<context*>(arg);
 
+    // const int nu = 400;
+    // SDL_Point points[nu*nu];
+    // for (int i = 0; i<nu; ++i){
+    //     for (int j = 0; j<nu; ++j){
+    //         points[j+i*nu]=SDL_Point{i,j};
+    //     }
+    // }
+    // SDL_SetRenderDrawColor(ctx->renderer, 54, 23, 12, SDL_ALPHA_OPAQUE);
+    // SDL_RenderDrawPoints(ctx->renderer, points, nu*nu);
+
     int vx = 0;
     int vy = 0;
     process_input(ctx);
@@ -127,16 +139,24 @@ void loop_handler(void *arg)
     SDL_QueryTexture(ctx->text_tex,
             NULL, NULL, &text_dest.w, &text_dest.h);
     SDL_RenderCopy(ctx->renderer, ctx->text_tex, NULL, &text_dest);
-    
+
+
 
     SDL_SetRenderDrawColor(ctx->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     if (ctx->points.size()>0){
         for (auto linija : ctx->points){
             if (linija.size()==1){
-                SDL_RenderDrawPoint(ctx->renderer, linija[0][0], linija[0][1]);
+                //SDL_RenderDrawPoint(ctx->renderer, linija[0][0], linija[0][1]);
+                thickLineRGBA(ctx->renderer, linija[0][0], linija[0][1], linija[0][0], linija[0][1], ctx->lineSize, 0, 0, 0, 255);
             }else{
                for (unsigned i = 0; i<linija.size()-1;++i){
-                SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1]);
+                thickLineRGBA(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1], ctx->lineSize, 0, 0, 0, 255);
+                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1]);
+                //SDL_RenderDrawLine(ctx->renderer, linija[i][0]+1, linija[i][1],  linija[i+1][0],  linija[i+1][1]);
+                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1]+1,  linija[i+1][0],  linija[i+1][1]);
+                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0]+1,  linija[i+1][1]);
+                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1]+1);
+                //thickLineRGBA(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1], 2, 255, 255, 255, 255);
                 } 
             }
                
@@ -222,6 +242,22 @@ EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent *e, void *user
     || e->altKey // Don't trigger any alt-X based shortcuts either (Alt-F4 is not overrideable though)
     || eventType == EMSCRIPTEN_EVENT_KEYPRESS || eventType == EMSCRIPTEN_EVENT_KEYUP; // Don't perform any default actions on these.
 }
+EM_BOOL wheel_callback(int eventType, const EmscriptenWheelEvent *e, void *userData)
+{
+    context* ctx = static_cast<context*>(userData);
+    printf("%s,%d screen: (%ld,%ld), client: (%ld,%ld),%s%s%s%s button: %hu, buttons: %hu, canvas: (%ld,%ld), target: (%ld, %ld), delta:(%g,%g,%g), deltaMode:%lu\n",
+    emscripten_event_type_to_string(eventType),eventType, e->mouse.screenX, e->mouse.screenY, e->mouse.clientX, e->mouse.clientY,
+    e->mouse.ctrlKey ? " CTRL" : "", e->mouse.shiftKey ? " SHIFT" : "", e->mouse.altKey ? " ALT" : "", e->mouse.metaKey ? " META" : "", 
+    e->mouse.button, e->mouse.buttons, e->mouse.canvasX, e->mouse.canvasY, e->mouse.targetX, e->mouse.targetY,
+    (float)e->deltaX, (float)e->deltaY, (float)e->deltaZ, e->deltaMode);
+    if (e->deltaY==-100){
+        ctx->increase_lineSize();
+    }else if (e->deltaY==100){
+        ctx->decrease_lineSize();
+    }
+
+  return 0;
+}
 EM_BOOL mouse_callback(int eventType, const EmscriptenMouseEvent *e, void *userData)
     {
     context* ctx = static_cast<context*>(userData);
@@ -287,8 +323,7 @@ int main()
     emscripten_set_keydown_callback(0, &ctx, 1, key_callback);
     emscripten_set_keyup_callback(0, &ctx, 1, key_callback);
     emscripten_set_keypress_callback(0, &ctx, 1, key_callback);
-
-    //ret = emscripten_set_wheel_callback(0, 0, 1, wheel_callback);
+    emscripten_set_wheel_callback(0, &ctx, 1, wheel_callback);
 
     emscripten_set_main_loop_arg(loop_handler, &ctx, -1, 1);
 
