@@ -1,20 +1,16 @@
-
-// #include "SDL2/SDL_image.h"
-// #include "SDL2/SDL_ttf.h"
 #include <iostream>
 #include <vector>
 #include <array>
 #include <string>
-#include "context.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include <GLES3/gl3.h>
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/key_codes.h>
-// #include "SDL2/SDL.h"
 
 using namespace std;
 /**
@@ -22,10 +18,63 @@ using namespace std;
  */
 #define REC_SQRT2 0.7071067811865475 
 
+class context
+{
+public:
+        
 
-/**
- * Loads the owl texture into the context
- */
+    const unsigned int width = 600;
+    const unsigned int height = 400;
+    int x = 0;
+    int y = 0;
+    int xrel = 0;
+    int yrel = 0;
+    vector<vector<array<int,2>>> points;
+    int lineSize = 1;
+    bool increase_lineSize();
+    bool decrease_lineSize();
+    //...
+    int drawing = 0;
+    SDL_Renderer *renderer;
+    /**
+     * Rectangle that the owl texture will be rendered into
+     */
+    SDL_Rect dest;
+    SDL_Texture *owl_tex;
+    /**
+     * Font that is used for rendering text, and
+     * a texture the text is rendered into
+     */
+    TTF_Font *font;
+    SDL_Texture *text_tex;
+    /**
+     * x and y components of owl's velocity
+     */
+    int owl_vx;
+    int owl_vy;
+
+};
+
+
+bool context::increase_lineSize(){
+
+    if(this->lineSize<5){
+        this->lineSize=this->lineSize+1;
+        return true;
+    }
+    return false;
+}
+
+bool context::decrease_lineSize(){
+    if(this->lineSize>1){
+        this->lineSize=this->lineSize-1;
+        return true;
+    }
+    return false;
+}
+
+
+// nebitan kod begins
 int get_owl_texture(context *ctx)
 {
   SDL_Surface *image = IMG_Load("assets/owl.png");
@@ -42,10 +91,6 @@ int get_owl_texture(context *ctx)
 
   return 1;
 }
-
-/**
- * Set the context's text texture to show the text 'text' 
- */
 void set_font_text(context *ctx, const char *text)
 {
 	SDL_Color fg = {0,0,0,255};
@@ -53,63 +98,25 @@ void set_font_text(context *ctx, const char *text)
     ctx->text_tex = SDL_CreateTextureFromSurface(ctx->renderer, text_surface);
     SDL_FreeSurface(text_surface);
 }
-
-/**
- * Load the font we're going to use and set the text to
- * be "Hello owl!"
- */
 int get_font_texture(context *ctx)
 {
     ctx->font = TTF_OpenFont("assets/FreeSans.ttf", 30);
-    
     return 1;
 }
 
-/**
- * Processes the input events and sets the velocity
- * of the owl accordingly
- */
 void process_input(context *ctx)
 {
-    
-
-
-    SDL_Event event;
-    
-
-    
+    //SDL_Event event;
     if (ctx->drawing==1){
         set_font_text(ctx, "drawing");
     }else{
         set_font_text(ctx, "NOT drawing");
     }
-    while (SDL_PollEvent(&event)) {
-
-
-    //cout << event.motion.x << endl
-    //<< event.motion.y << endl;
-        if (event.button.type == SDL_MOUSEBUTTONDOWN){
-            if (event.button.button == SDL_BUTTON_LEFT){
-                //ctx->drawing = 1;
-                //vector<array<int,2>> temp;
-                //temp.push_back({event.motion.x,event.motion.y});
-                //ctx->points.push_back(temp);
-            }
-        }else if (event.button.type == SDL_MOUSEBUTTONUP){
-            if (event.button.button == SDL_BUTTON_LEFT){
-                //ctx->drawing = 0;
-            }
-        }
-
-    }
 
 }
+// nebitan kod ends
 
-/**
- * Loop handler that gets called each animation frame,
- * process the input, update the position of the owl and 
- * then render the texture
- */
+
 void loop_handler(void *arg)
 {
 
@@ -124,7 +131,6 @@ void loop_handler(void *arg)
     // }
     // SDL_SetRenderDrawColor(ctx->renderer, 54, 23, 12, SDL_ALPHA_OPAQUE);
     // SDL_RenderDrawPoints(ctx->renderer, points, nu*nu);
-
     int vx = 0;
     int vy = 0;
     process_input(ctx);
@@ -140,8 +146,6 @@ void loop_handler(void *arg)
             NULL, NULL, &text_dest.w, &text_dest.h);
     SDL_RenderCopy(ctx->renderer, ctx->text_tex, NULL, &text_dest);
 
-
-
     SDL_SetRenderDrawColor(ctx->renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     if (ctx->points.size()>0){
         for (auto linija : ctx->points){
@@ -151,23 +155,15 @@ void loop_handler(void *arg)
             }else{
                for (unsigned i = 0; i<linija.size()-1;++i){
                 thickLineRGBA(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1], ctx->lineSize, 0, 0, 0, 255);
-                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1]);
-                //SDL_RenderDrawLine(ctx->renderer, linija[i][0]+1, linija[i][1],  linija[i+1][0],  linija[i+1][1]);
-                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1]+1,  linija[i+1][0],  linija[i+1][1]);
-                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0]+1,  linija[i+1][1]);
-                //SDL_RenderDrawLine(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1]+1);
                 //thickLineRGBA(ctx->renderer, linija[i][0], linija[i][1],  linija[i+1][0],  linija[i+1][1], 2, 255, 255, 255, 255);
                 } 
-            }
-               
-            
+            }   
         }
         
     }
 
 
     SDL_SetRenderDrawColor(ctx->renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
-
     SDL_RenderPresent(ctx->renderer);
 }
 
@@ -182,8 +178,6 @@ int interpret_charcode_for_keyevent(int eventType, const EmscriptenKeyboardEvent
   if (e->which) return e->which;
   return e->keyCode;
 }
-
-
 static inline const char *emscripten_event_type_to_string(int eventType) {
     const char *events[] = { "(invalid)", "(none)", "keypress", "keydown", "keyup", "click", "mousedown", "mouseup", "dblclick", "mousemove", "wheel", "resize", 
         "scroll", "blur", "focus", "focusin", "focusout", "deviceorientation", "devicemotion", "orientationchange", "fullscreenchange", "pointerlockchange", 
@@ -205,42 +199,39 @@ static inline const char *emscripten_event_type_to_string(int eventType) {
   }
   return num_chars;
 }
-
 int emscripten_key_event_is_printable_character(const EmscriptenKeyboardEvent *keyEvent)
 {
   // Not sure if this is correct, but heuristically looks good. Improvements on corner cases welcome.
   return number_of_characters_in_utf8_string(keyEvent->key) == 1;
 }
-
 EM_BOOL key_callback(int eventType, const EmscriptenKeyboardEvent *e, void *userData)
 {
     context* ctx = static_cast<context*>(userData);
-  int dom_pk_code = emscripten_compute_dom_pk_code(e->code);
+    int dom_pk_code = emscripten_compute_dom_pk_code(e->code);
 
-  printf("%s, key: \"%s\" %d (printable: %s), code: \"%s\" = %s (%d), location: %lu,%s%s%s%s repeat: %d, locale: \"%s\", char: \"%s\", charCode: %lu (interpreted: %d), keyCode: %s(%lu), which: %lu\n",
+    printf("%s, key: \"%s\" %d (printable: %s), code: \"%s\" = %s (%d), location: %lu,%s%s%s%s repeat: %d, locale: \"%s\", char: \"%s\", charCode: %lu (interpreted: %d), keyCode: %s(%lu), which: %lu\n",
     emscripten_event_type_to_string(eventType), e->key, eventType, emscripten_key_event_is_printable_character(e) ? "true" : "false", e->code,
     emscripten_dom_pk_code_to_string(dom_pk_code), dom_pk_code, e->location,
     e->ctrlKey ? " CTRL" : "", e->shiftKey ? " SHIFT" : "", e->altKey ? " ALT" : "", e->metaKey ? " META" : "", 
     e->repeat, e->locale, e->charValue, e->charCode, interpret_charcode_for_keyevent(eventType, e), emscripten_dom_vk_to_string(e->keyCode), e->keyCode, e->which);
 
-  if (eventType == EMSCRIPTEN_EVENT_KEYUP) printf("\n"); // Visual cue
+    if (eventType == EMSCRIPTEN_EVENT_KEYUP) printf("\n"); // Visual cue
     if(eventType==2 && e->ctrlKey && !e->repeat && e->which==90){
         if (ctx->points.size())
         {
             ctx->drawing=0;
             ctx->points.pop_back();
-        }
-        
-        
+        } 
     }
+    return false;
   // Return true for events we want to suppress default web browser handling for.
   // For testing purposes, want to return false here on most KeyDown messages so that they get transformed to KeyPress messages.
-  return e->keyCode == DOM_VK_BACK_SPACE // Don't navigate away from this test page on backspace.
-    || e->keyCode == DOM_VK_TAB // Don't change keyboard focus to different browser UI elements while testing.
-    || (e->keyCode >= DOM_VK_F1 && e->keyCode <= DOM_VK_F24) // Don't F5 refresh the test page to reload.
-    || e->ctrlKey // Don't trigger e.g. Ctrl-B to open bookmarks
-    || e->altKey // Don't trigger any alt-X based shortcuts either (Alt-F4 is not overrideable though)
-    || eventType == EMSCRIPTEN_EVENT_KEYPRESS || eventType == EMSCRIPTEN_EVENT_KEYUP; // Don't perform any default actions on these.
+//  return e->keyCode == DOM_VK_BACK_SPACE // Don't navigate away from this test page on backspace.
+//    || e->keyCode == DOM_VK_TAB // Don't change keyboard focus to different browser UI elements while testing.
+//    || (e->keyCode >= DOM_VK_F1 && e->keyCode <= DOM_VK_F24) // Don't F5 refresh the test page to reload.
+//    || e->ctrlKey // Don't trigger e.g. Ctrl-B to open bookmarks
+//    || e->altKey // Don't trigger any alt-X based shortcuts either (Alt-F4 is not overrideable though)
+//    || eventType == EMSCRIPTEN_EVENT_KEYPRESS || eventType == EMSCRIPTEN_EVENT_KEYUP; // Don't perform any default actions on these.
 }
 EM_BOOL wheel_callback(int eventType, const EmscriptenWheelEvent *e, void *userData)
 {
@@ -277,12 +268,7 @@ EM_BOOL mouse_callback(int eventType, const EmscriptenMouseEvent *e, void *userD
         switch(eventType){
             case 5:
                 if (ctx->drawing){
-                    //vector<array<int,2>> temp;
-                    //temp.push_back({e->canvasX,e->canvasY});
-                    //ctx->points.push_back(temp);
                     ctx->points.push_back({{e->canvasX,e->canvasY}});
-
-                    //ctx->points.pushback(vector<array<int,2>>());
                 }
                 break;
             case 8:
@@ -291,16 +277,15 @@ EM_BOOL mouse_callback(int eventType, const EmscriptenMouseEvent *e, void *userD
                 }
                 break;
         }
-
-
     return 0;
-
     }
 
 int main()
 {
     SDL_Window *window;
+
     context ctx;
+
 
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
@@ -329,3 +314,6 @@ int main()
 
     return 0;
 }
+
+
+//emcc main.cpp -O3 -std=c++17 -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS=["png"] -s USE_SDL_TTF=2 -s USE_SDL_GFX=2 -s EXPORTED_FUNCTIONS=["_main"] --preload-file assets -o html/scribblie.js
